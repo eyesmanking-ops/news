@@ -1,0 +1,43 @@
+name: 新聞自動巡邏
+on:
+  schedule:
+    # 這裡設定每小時跑一次（GitHub 使用 UTC 時間，這大約是對應台灣 8:00-22:00）
+    - cron: '0 0-14 * * *'
+  workflow_dispatch: # 讓你可以手動點擊測試
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 檢查程式碼
+      uses: actions/checkout@v3
+
+    - name: 設定 Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: 安裝套件
+      run: |
+        pip install requests beautifulsoup4 feedparser
+
+    - name: 執行爬蟲
+      run: python main.py
+
+    - name: 更新網頁與時間紀錄
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .
+        git commit -m "自動更新新聞網頁" || echo "無更新"
+        git push
+
+    - name: 傳送 Telegram 通知
+      if: success()
+      run: |
+        # 這裡會從你剛才設定的保險箱拿密碼
+        URL="https://eyesmamking-ops.github.io"
+        MESSAGE="📢 新聞巡邏完畢！最新清單已更新：$URL"
+        curl -s -X POST "https://telegram.org{{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+          -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+          -d text="$MESSAGE"
