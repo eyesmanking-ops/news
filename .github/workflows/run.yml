@@ -1,9 +1,8 @@
 name: 新聞自動巡邏
 on:
   schedule:
-    # 這裡設定每小時跑一次（GitHub 使用 UTC 時間，這大約是對應台灣 8:00-22:00）
-    - cron: '0 0-14 * * *'
-  workflow_dispatch: # 讓你可以手動點擊測試
+    - cron: '0,30 0-14 * * *'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -29,7 +28,7 @@ jobs:
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add .
-        git commit -m "自動更新新聞網頁" || echo "無更新"
+        git commit -m "自動更新新聞網頁" || exit 0
         git push
 
     - name: 傳送 Telegram 通知
@@ -37,4 +36,4 @@ jobs:
       run: |
         curl -s -X POST "https://telegram.org{{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
           -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-          -d text="📢 半小時新聞巡邏完畢！最新清單已更新：https://github.io"
+          -d text="📢 半小時新聞巡邏完畢！最新清單：https://github.io"
