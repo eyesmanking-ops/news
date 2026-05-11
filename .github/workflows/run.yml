@@ -35,9 +35,6 @@ jobs:
     - name: 傳送 Telegram 通知
       if: success()
       run: |
-        # 這裡會從你剛才設定的保險箱拿密碼
-        URL="https://eyesmamking-ops.github.io"
-        MESSAGE="📢 新聞巡邏完畢！最新清單已更新：$URL"
         curl -s -X POST "https://telegram.org{{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
           -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-          -d text="$MESSAGE"
+          -d text="📢 半小時新聞巡邏完畢！最新清單已更新：https://github.io"
