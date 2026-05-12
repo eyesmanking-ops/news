@@ -2,19 +2,13 @@ name: 新聞自動巡邏
 
 on:
   schedule:
+    # 每 30 分鐘自動執行
     - cron: '*/30 * * * *'
-  workflow_dispatch:
+  workflow_dispatch: # 允許手動測試
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    # 將變數提升到 job 層級，確保所有 steps 都能讀到
-        env:
-          # 這裡必須對應您在 GitHub 設定的完整名稱
-          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TG_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python main.py
-    
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -28,4 +22,8 @@ jobs:
         run: pip install requests feedparser
 
       - name: Run Script
+        env:
+          # 左邊是程式碼要讀的變數，右邊是您 GitHub Secrets 的長名稱
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python main.py
