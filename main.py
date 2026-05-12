@@ -35,7 +35,7 @@ def main():
     # 程式執行時會自動組合成：https:// + 網域 + 路徑
     SOURCES = {
         "中央社": "https://feedburner.com/rsscna/mainland",
-        "自由時報": "https://ltn.com.tw/rss/all.xml",
+        "自由時報": "https://news.ltn.com.tw/rss/all.xml",
         "中時新聞": "https://chinatimes.com/rss/realtimenews-total.xml",
         "聯合新聞": "https://udn.com/rssfeed/news/2/6638?ch=news",
         "青年日報": "https://ydn.com.tw/rss/news/1",
