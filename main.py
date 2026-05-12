@@ -6,8 +6,7 @@ def send_to_telegram(text):
     token = os.getenv("TG_TOKEN")
     chat_id = os.getenv("TG_CHAT_ID")
     
-    # 修正重點：確保網址格式完全正確
-    # 正確格式：https://telegram.org[TOKEN]/sendMessage
+    # 注意：這裡必須改為 api.telegram.org 且要有 /bot
     url = f"https://telegram.org{token}/sendMessage"
     
     payload = {
@@ -23,6 +22,7 @@ def send_to_telegram(text):
         print(f"DEBUG: Telegram 回應: {resp.text}")
     except Exception as e:
         print(f"DEBUG: 發送過程發生錯誤: {e}")
+
 
 def main():
     print("DEBUG: 程式開始執行")
