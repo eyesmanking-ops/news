@@ -74,8 +74,12 @@ def main():
             
             for entry in feed.entries:
                 link = getattr(entry, 'link', None)
-                # 這裡會過濾重複
                 if not link or link in seen_links: continue
+                
+                # --- 暫時註解掉時間判定，確保所有抓到的都顯示出來 ---
+                items.append(f"• <a href='{link}'>{entry.title}</a>")
+                seen_links.add(link)
+
                 
                 pub_time = None
                 if hasattr(entry, 'published_parsed') and entry.published_parsed:
