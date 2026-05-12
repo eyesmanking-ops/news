@@ -3,12 +3,31 @@ import os, requests, feedparser
 from datetime import datetime, timedelta
 
 def send_to_telegram(text):
-    token = os.getenv("TG_TOKEN", "8654632376:AAFuCyZWI6CdSS6op76c1sELiJFP0hJ52h4")
-    chat_id = os.getenv("TG_CHAT_ID", "8741175747")
+    # 讀取並自動去掉前後可能存在的空白
+    token = os.getenv("TG_TOKEN", "8654632376:AAFuCyZWI6CdSS6op76c1sELiJFP0hJ52h4").strip()
+    chat_id = os.getenv("TG_CHAT_ID", "8741175747").strip()
+    
+    # 確保 token 前面沒有重複的 'bot' 字眼，這也是常見錯誤
+    if token.startswith("bot"):
+        token = token.replace("bot", "", 1)
+        
     url = f"https://api.telegram.org/bot{token}/sendMessage"
-    payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True}
-    resp = requests.post(url, data=payload)
-    print(f"Telegram 回應: {resp.text}")
+    
+    payload = {
+        "chat_id": chat_id, 
+        "text": text, 
+        "parse_mode": "HTML", 
+        "disable_web_page_preview": True
+    }
+    
+    try:
+        resp = requests.post(url, data=payload, timeout=10)
+        # 如果還是 404，印出除錯資訊
+        if resp.status_code == 404:
+            print(f"DEBUG: 傳送失敗，請檢查 Token 是否正確。當前使用的網址開頭為: {url[:30]}...")
+        print(f"Telegram 回應: {resp.text}")
+    except Exception as e:
+        print(f"網路連線異常: {e}")
 
 def main():
     SOURCES = {
