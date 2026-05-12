@@ -9,9 +9,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     # 將變數提升到 job 層級，確保所有 steps 都能讀到
-    env:
-      TG_TOKEN: ${{ secrets.TG_TOKEN }}
-      TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        env:
+          # 這裡必須對應您在 GitHub 設定的完整名稱
+          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python main.py
     
     steps:
       - name: Checkout Code
