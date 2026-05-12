@@ -53,8 +53,9 @@ def fetch_news():
 def send_to_telegram(text):
     token = os.getenv("TG_TOKEN")
     chat_id = os.getenv("TG_CHAT_ID")
-    if not token or not chat_id: return
-
+    
+    print(f"DEBUG: 正在嘗試發送到 ID: {chat_id}") # 檢查 ID 是否有抓到
+    
     url = f"https://telegram.org{token}/sendMessage"
     payload = {
         "chat_id": chat_id,
@@ -62,11 +63,7 @@ def send_to_telegram(text):
         "parse_mode": "HTML",
         "disable_web_page_preview": True
     }
-    requests.post(url, data=payload)
-
-if __name__ == "__main__":
-    content = fetch_news()
-    if content:
-        send_to_telegram(content)
-    else:
-        print("過去一小時內沒有新新聞")
+    # 移除 try-except，讓錯誤直接顯示在 GitHub Log
+    resp = requests.post(url, data=payload)
+    print(f"DEBUG: Telegram 回應: {resp.text}") # 這行會告訴我們為什麼失敗
+    resp.raise_for_status()
