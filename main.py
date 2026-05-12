@@ -36,41 +36,46 @@ def main():
         "教育電台": "https://ner.gov.tw/rss"
     }
     
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-    summary_text = f"<b>▋ 新聞巡邏 ({datetime.now().strftime('%H:%M')})</b>\n\n"
+ # 2. 模擬 iPhone 11 的身份，這能騙過中時、聯合的阻擋機制
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+    }
+    
+    summary_text = f"<b>▋ 新聞巡邏 ({datetime.now().strftime('%m/%d %H:%M')})</b>\n\n"
     has_news = False
 
     for name, url in SOURCES.items():
         print(f"DEBUG: 正在抓取 {name}...")
         try:
-            # 增加 verify=False 避免教育電台等網站的 SSL 憑證錯誤
-            resp = requests.get(url, headers=headers, timeout=20, verify=False)
+            # 3. 強制使用模擬身份抓取，並忽略 SSL 錯誤 (針對教育電台)
+            resp = requests.get(url, headers=headers, timeout=25, verify=False)
             resp.encoding = 'utf-8'
+            
+            # 4. 將抓到的內容餵給解析器
             feed = feedparser.parse(resp.text)
             
             items = []
-            # 1. 稍微放寬時間到 130 分鐘，確保銜接不遺漏
+            # 5. 放寬時間判定：抓取過去 130 分鐘，確保跨小時不遺漏
             time_limit = datetime.utcnow() - timedelta(minutes=130)
             
             for entry in feed.entries:
-                # 2. 獲取新聞發布時間，若抓不到則預設為 None
                 pub_time = None
                 if hasattr(entry, 'published_parsed') and entry.published_parsed:
                     pub_time = datetime.fromtimestamp(time.mktime(entry.published_parsed))
                 
-                # 3. 關鍵改動：如果解析不出時間(None)，或時間在 130 分鐘內，通通收錄
-                # 同時刪除了原本 len(items) >= 5 的限制，保證抓到「全部」
+                # 6. 如果解析不出時間或在時間內，通通收錄
                 if pub_time is None or pub_time > time_limit:
                     items.append(f"• <a href='{entry.link}'>{entry.title}</a>")
             
             if items:
-                # 這裡加入則數統計，方便您在手機上確認
+                # 顯示該媒體抓到的總則數，確保「不設上限」
                 summary_text += f"<b>【{name} ({len(items)}則)】</b>\n" + "\n".join(items) + "\n\n"
                 has_news = True
                 print(f"DEBUG: {name} 成功抓到 {len(items)} 則")
-
+            else:
+                print(f"DEBUG: {name} 抓取結果為空")
         except Exception as e:
-            print(f"DEBUG: {name} 失敗: {str(e)[:50]}")
+            print(f"DEBUG: {name} 抓取失敗: {e}")
 
     if has_news:
         send_to_telegram(summary_text)
