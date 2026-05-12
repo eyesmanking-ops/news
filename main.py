@@ -30,19 +30,26 @@ def send_to_telegram(text):
 def main():
     print("DEBUG: 程式開始執行")
     
-    SOURCES = {
-        "中央社": "https://feeds.feedburner.com/rsscna/politics",
-        "自由時報": "https://ltn.com.tw/rss/all.xml",
-        "中時新聞": "https://chinatimes.com/rss/realtimenews-total.xml",
-        "聯合新聞": "https://udn.com/rssfeed/news/2/6638?ch=news",
-        "青年日報": "https://ydn.com.tw/rss/news/1",
-        "教育電台": "https://ner.gov.tw/rss"
+    # 這裡我們用「基礎網址 + 後綴」的方式，避免系統縮址問題
+    base_urls = {
+        "中央社": "https://feedburner.com",
+        "自由時報": "https://ltn.com.tw" + "/rss/all.xml",
+        "中時新聞": "https://chinatimes.com" + "/rss/realtimenews-total.xml",
+        "聯合新聞": "https://udn.com" + "/rssfeed/news/2/6638?ch=news",
+        "青年日報": "https://ydn.com.tw" + "/rss/news/1",
+        "教育電台": "https://ner.gov.tw" + "/rss"
     }
+    SOURCES = base_urls
     
- # 2. 模擬 iPhone 11 的身份，這能騙過中時、聯合的阻擋機制
+    # 模擬成高權限的電腦版 Chrome 瀏覽器，這比手機版更難被阻擋
     headers = {
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
     }
+
     
     summary_text = f"<b>▋ 新聞巡邏 ({datetime.now().strftime('%m/%d %H:%M')})</b>\n\n"
     has_news = False
