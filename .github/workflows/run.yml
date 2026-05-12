@@ -1,13 +1,13 @@
-name: News Patrol Bot
+name: 新聞自動巡邏
 
 on:
   schedule:
-    # 每 30 分鐘執行一次 (UTC 時間)
+    # 每 30 分鐘執行一次 (UTC 0, 30)
     - cron: '*/30 * * * *'
-  workflow_dispatch: # 允許手動點擊執行
+  workflow_dispatch: # 允許手動執行測試
 
 jobs:
-  run-bot:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -18,10 +18,11 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Install Requirements
+      - name: Install Dependencies
         run: pip install requests feedparser
 
-      - name: Execute Script
+      - name: Run Script
+        # 重要：env 區塊必須與 Secrets 對應
         env:
           TG_TOKEN: ${{ secrets.TG_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
