@@ -3,31 +3,40 @@ import os, requests, feedparser
 from datetime import datetime, timedelta
 
 def send_to_telegram(text):
-    # 讀取並自動去掉前後可能存在的空白
-    token = os.getenv("TG_TOKEN", "8654632376:AAFuCyZWI6CdSS6op76c1sELiJFP0hJ52h4").strip()
+    # 1. 取得 Token 並進行「極限清理」
+    raw_token = os.getenv("TG_TOKEN", "8654632376:AAFuCyZWI6CdSS6op76c1sELiJFP0hJ52h4")
+    # 移除前後空白、換行符號，以及可能誤入的 "bot" 或 "/" 字眼
+    token = raw_token.strip().replace(" ", "").replace("\n", "").replace("\r", "")
+    if token.startswith("bot"):
+        token = token[3:]
+    if token.startswith("/"):
+        token = token[1:]
+        
+    # 2. 取得 Chat ID 並清理
     chat_id = os.getenv("TG_CHAT_ID", "8741175747").strip()
     
-    # 確保 token 前面沒有重複的 'bot' 字眼，這也是常見錯誤
-    if token.startswith("bot"):
-        token = token.replace("bot", "", 1)
-        
+    # 3. 正確拼接網址 (注意 bot 和 token 之間絕對不能有斜線)
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     
     payload = {
-        "chat_id": chat_id, 
-        "text": text, 
-        "parse_mode": "HTML", 
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "HTML",
         "disable_web_page_preview": True
     }
     
+    print(f"DEBUG: 正在嘗試傳送至 Bot (Token開頭: {token[:5]}...)")
+    
     try:
-        resp = requests.post(url, data=payload, timeout=10)
-        # 如果還是 404，印出除錯資訊
-        if resp.status_code == 404:
-            print(f"DEBUG: 傳送失敗，請檢查 Token 是否正確。當前使用的網址開頭為: {url[:30]}...")
-        print(f"Telegram 回應: {resp.text}")
+        resp = requests.post(url, data=payload, timeout=15)
+        if resp.status_code != 200:
+            print(f"DEBUG: 傳送失敗代碼 {resp.status_code}")
+            print(f"DEBUG: 錯誤詳情 {resp.text}")
+            print(f"DEBUG: 檢查網址格式是否為 .../bot數字:英文/... -> {url[:35]}...")
+        else:
+            print("Telegram 傳送成功！")
     except Exception as e:
-        print(f"網路連線異常: {e}")
+        print(f"發送時發生異常: {e}")
 
 def main():
     SOURCES = {
