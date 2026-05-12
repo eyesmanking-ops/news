@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 def send_to_telegram(text):
     token = os.getenv("TG_TOKEN")
     chat_id = os.getenv("TG_CHAT_ID")
-    url = f"https://telegram.org{token}/sendMessage"
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
     
     # 如果內容超過 3500 字，自動拆分發送
     if len(text) > 3500:
