@@ -31,15 +31,17 @@ def main():
     print("DEBUG: 程式開始執行")
     
     # 這裡我們用「基礎網址 + 後綴」的方式，避免系統縮址問題
-    base_urls = {
-        "中央社": "https://feedburner.com",
-        "自由時報": "https://ltn.com.tw" + "/rss/all.xml",
-        "中時新聞": "https://chinatimes.com" + "/rss/realtimenews-total.xml",
-        "聯合新聞": "https://udn.com" + "/rssfeed/news/2/6638?ch=news",
-        "青年日報": "https://ydn.com.tw" + "/rss/news/1",
-        "教育電台": "https://ner.gov.tw" + "/rss"
+    # 採用零件拼湊法，徹底避開系統縮網址問題
+    # 程式執行時會自動組合成：https:// + 網域 + 路徑
+    SOURCES = {
+        "中央社": "https://" + "://feedburner.com" + "/rsscna/mainland",
+        "自由時報": "https://" + "://ltn.com.tw" + "/rss/all.xml",
+        "中時新聞": "https://" + "://chinatimes.com" + "/rss/realtimenews-total.xml",
+        "聯合新聞": "https://" + "udn.com" + "/rssfeed/news/2/6638?ch=news",
+        "青年日報": "https://" + "://ydn.com.tw" + "/rss/news/1",
+        "教育電台": "https://" + "www.ner.gov.tw" + "/rss"
     }
-    SOURCES = base_urls
+
     
     # 模擬成高權限的電腦版 Chrome 瀏覽器，這比手機版更難被阻擋
     headers = {
