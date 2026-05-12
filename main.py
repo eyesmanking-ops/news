@@ -48,7 +48,7 @@ def main():
             resp.encoding = 'utf-8'
             feed = feedparser.parse(resp.text)
             
-                       items = []
+            items = []
             # 1. 稍微放寬時間到 130 分鐘，確保銜接不遺漏
             time_limit = datetime.utcnow() - timedelta(minutes=130)
             
