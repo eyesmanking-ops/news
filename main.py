@@ -48,23 +48,27 @@ def main():
             resp.encoding = 'utf-8'
             feed = feedparser.parse(resp.text)
             
-            items = []
-            # 抓取過去 2 小時 (120分鐘)，確保內容充足
-            time_limit = datetime.utcnow() - timedelta(minutes=120)
+                       items = []
+            # 1. 稍微放寬時間到 130 分鐘，確保銜接不遺漏
+            time_limit = datetime.utcnow() - timedelta(minutes=130)
             
             for entry in feed.entries:
-                pub_time = datetime.utcnow()
+                # 2. 獲取新聞發布時間，若抓不到則預設為 None
+                pub_time = None
                 if hasattr(entry, 'published_parsed') and entry.published_parsed:
                     pub_time = datetime.fromtimestamp(time.mktime(entry.published_parsed))
                 
-                if pub_time > time_limit:
+                # 3. 關鍵改動：如果解析不出時間(None)，或時間在 130 分鐘內，通通收錄
+                # 同時刪除了原本 len(items) >= 5 的限制，保證抓到「全部」
+                if pub_time is None or pub_time > time_limit:
                     items.append(f"• <a href='{entry.link}'>{entry.title}</a>")
-                if len(items) >= 5: break 
             
             if items:
-                summary_text += f"<b>【{name}】</b>\n" + "\n".join(items) + "\n\n"
+                # 這裡加入則數統計，方便您在手機上確認
+                summary_text += f"<b>【{name} ({len(items)}則)】</b>\n" + "\n".join(items) + "\n\n"
                 has_news = True
                 print(f"DEBUG: {name} 成功抓到 {len(items)} 則")
+
         except Exception as e:
             print(f"DEBUG: {name} 失敗: {str(e)[:50]}")
 
