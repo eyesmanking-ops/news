@@ -28,12 +28,12 @@ def main():
     print("DEBUG: 程式開始執行")
     
     SOURCES = {
-        "中央社": "https://feedburner.com",
-        "自由時報": "https://ltn.com.tw",
-        "中時新聞": "https://chinatimes.com",
-        "聯合新聞": "https://udn.com",
-        "青年日報": "https://ydn.com.tw",
-        "教育電台": "https://ner.gov.tw"
+        "中央社": "https://feeds.feedburner.com/rsscna/politics",
+        "自由時報": "https://ltn.com.tw/rss/all.xml",
+        "中時新聞": "https://chinatimes.com/rss/realtimenews-total.xml",
+        "聯合新聞": "https://udn.com/rssfeed/news/2/6638?ch=news",
+        "青年日報": "https://ydn.com.tw/rss/news/1",
+        "教育電台": "https://ner.gov.tw/rss"
     }
     
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
