@@ -15,7 +15,7 @@ SOURCES = {
 def fetch_news():
     # 關鍵設定：只抓取過去 65 分鐘內的新聞 (多給 5 分鐘緩衝，確保不漏掉)
     # 使用 UTC 時間進行比較，因為 GitHub 伺服器預設是 UTC
-    time_limit = datetime.utcnow() - timedelta(minutes=65)
+    time_limit = datetime.utcnow() - timedelta(minutes=1440)
     
     # 顯示給您看的標題改回台灣時間 (UTC+8)
     tw_now = datetime.utcnow() + timedelta(hours=8)
