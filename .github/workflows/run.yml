@@ -1,38 +1,28 @@
-name: 新聞自動巡邏
+name: News Patrol Bot
 
 on:
   schedule:
-    # 這裡設定每小時執行一次 (例如台灣時間每小時的 05 分)
-    - cron: '5 * * * *'
-  workflow_dispatch: # 讓你可以手動點擊測試
+    # 每 30 分鐘執行一次 (UTC 時間)
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # 允許手動點擊執行
 
 jobs:
-  build:
+  run-bot:
     runs-on: ubuntu-latest
     steps:
-    - name: 檢查程式碼
-      uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: 設定 Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
 
-    - name: 安裝套件
-      run: |
-        pip install requests beautifulsoup4 feedparser
+      - name: Install Requirements
+        run: pip install requests feedparser
 
-    - name: 執行爬蟲並發送通知
-      # 這裡要把 GitHub 的 Secrets 傳遞給 Python 程式
-      env:
-        TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        TG_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      run: python main.py
-
-    - name: 更新紀錄 (如果 main.py 有產生新檔案)
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add .
-        git commit -m "自動更新時間紀錄" || exit 0
-        git push
+      - name: Execute Script
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: python main.py
