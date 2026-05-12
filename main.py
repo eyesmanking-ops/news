@@ -5,23 +5,26 @@ from datetime import datetime, timedelta
 def send_to_telegram(text):
     token = os.getenv("TG_TOKEN")
     chat_id = os.getenv("TG_CHAT_ID")
+    url = f"https://telegram.org{token}/sendMessage"
     
-    # 注意：這裡必須改為 api.telegram.org 且要有 /bot
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-    
-    payload = {
-        "chat_id": chat_id, 
-        "text": text, 
-        "parse_mode": "HTML", 
-        "disable_web_page_preview": True
-    }
-    
-    print(f"DEBUG: 嘗試發送至 Telegram API...")
-    try:
-        resp = requests.post(url, data=payload, timeout=15)
+    # 如果內容超過 3500 字，自動拆分發送
+    if len(text) > 3500:
+        print("DEBUG: 內容過長，分段發送...")
+        parts = text.split('<b>【')
+        current_msg = parts[0]
+        for i in range(1, len(parts)):
+            next_part = '<b>【' + parts[i]
+            if len(current_msg) + len(next_part) > 3500:
+                requests.post(url, data={"chat_id": chat_id, "text": current_msg, "parse_mode": "HTML", "disable_web_page_preview": True})
+                current_msg = next_part
+            else:
+                current_msg += next_part
+        requests.post(url, data={"chat_id": chat_id, "text": current_msg, "parse_mode": "HTML", "disable_web_page_preview": True})
+    else:
+        resp = requests.post(url, data={"chat_id": chat_id, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True})
         print(f"DEBUG: Telegram 回應: {resp.text}")
-    except Exception as e:
-        print(f"DEBUG: 發送過程發生錯誤: {e}")
+
+
 
 
 def main():
@@ -38,7 +41,7 @@ def main():
     
  # 2. 模擬 iPhone 11 的身份，這能騙過中時、聯合的阻擋機制
     headers = {
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1'
     }
     
     summary_text = f"<b>▋ 新聞巡邏 ({datetime.now().strftime('%m/%d %H:%M')})</b>\n\n"
