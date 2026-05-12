@@ -7,7 +7,7 @@ def send_to_telegram(text):
     chat_id = os.getenv("TG_CHAT_ID")
     
     # 注意：這裡必須改為 api.telegram.org 且要有 /bot
-    url = f"https://telegram.org{token}/sendMessage"
+    url = f"https://api.telegram.org{token}/sendMessage"
     
     payload = {
         "chat_id": chat_id, 
