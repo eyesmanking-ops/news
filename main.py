@@ -3,11 +3,12 @@ import os, requests, feedparser
 from datetime import datetime, timedelta
 
 def send_to_telegram(text):
-    token = os.getenv("TG_TOKEN")
-    chat_id = os.getenv("TG_CHAT_ID")
+    # 同時嘗試讀取兩種名稱，確保萬無一失
+    token = os.getenv("TELEGRAM_BOT_TOKEN") or os.getenv("TG_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID") or os.getenv("TG_CHAT_ID")
     
     if not token:
-        print("❌ 診斷：TG_TOKEN 依然是 None，請檢查 GitHub Secrets 的名稱是否真的是 TG_TOKEN")
+        print("❌ 錯誤：仍然抓不到變數，請確認 GitHub Secrets 名稱是否為 TELEGRAM_BOT_TOKEN")
         return
 
     url = f"https://api.telegram.org/bot{token}/sendMessage"
