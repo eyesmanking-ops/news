@@ -57,47 +57,46 @@ def main():
     has_news = False
 
     for name, url in SOURCES.items():
+        # 自動檢查並修正常見的網址門牌錯誤
+        test_url = url
+        if name == "中時新聞" and "www." not in url:
+            test_url = url.replace("https://", "https://www.")
+        if name == "自由時報" and "news." not in url:
+            test_url = url.replace("https://", "https://news.")
+        if name == "教育電台" and not url.endswith("current"):
+            test_url = "https://ner.gov.tw"
+
+        print(f"DEBUG: 正在嘗試存取 {name}，網址: {test_url}")
+        
         try:
-            # 關鍵：加上 Referer 偽裝和忽略安全檢查
+            # 身份偽裝更徹底
             headers = {
-                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
                 'Referer': 'https://google.com'
             }
-            # verify=False 是為了救回教育電台
-            resp = requests.get(url, headers=headers, timeout=20, verify=False)
-            resp.encoding = 'utf-8'
-            feed = feedparser.parse(resp.text)
-            print(f"DEBUG: {name} 抓取狀態碼: {resp.status_code}")
-            print(f"DEBUG: {name} 解析到的則數: {len(feed.entries)}")
-
+            resp = requests.get(test_url, headers=headers, timeout=20, verify=False)
+            print(f"DEBUG: {name} 狀態碼: {resp.status_code}")
             
+            feed = feedparser.parse(resp.content)
             items = []
-            # 改為 125 分鐘，確保跨小時不遺漏
-            time_limit = datetime.utcnow() - timedelta(minutes=125)
             
+            # --- 核心改動：直接抓取所有 entries，不設任何時間或則數限制 ---
             for entry in feed.entries:
                 link = getattr(entry, 'link', None)
                 if not link or link in seen_links: continue
                 
-                # --- 暫時註解掉時間判定，確保所有抓到的都顯示出來 ---
                 items.append(f"• <a href='{link}'>{entry.title}</a>")
                 seen_links.add(link)
-
-                
-                pub_time = None
-                if hasattr(entry, 'published_parsed') and entry.published_parsed:
-                    pub_time = datetime.fromtimestamp(time.mktime(entry.published_parsed))
-                
-                # 確保是兩小時內的
-                if pub_time is None or pub_time > time_limit:
-                    items.append(f"• <a href='{link}'>{entry.title}</a>")
-                    seen_links.add(link)
             
             if items:
-                summary_text += f"<b>【{name}】</b>\n" + "\n".join(items) + "\n\n"
+                summary_text += f"<b>【{name} ({len(items)}則)】</b>\n" + "\n".join(items) + "\n\n"
                 has_news = True
-        except:
-            continue
+                print(f"DEBUG: {name} 成功抓到 {len(items)} 則")
+            else:
+                print(f"DEBUG: {name} 內容為空 (可能被阻擋或解析失敗)")
+        except Exception as e:
+            print(f"DEBUG: {name} 發生連線錯誤: {str(e)[:50]}")
+
 
 
     if has_news:
