@@ -1,8 +1,10 @@
 name: 新聞自動巡邏
+
 on:
   schedule:
-    - cron: '0,30 0-14 * * *'
-  workflow_dispatch:
+    # 這裡設定每小時執行一次 (例如台灣時間每小時的 05 分)
+    - cron: '5 * * * *'
+  workflow_dispatch: # 讓你可以手動點擊測試
 
 jobs:
   build:
@@ -20,20 +22,17 @@ jobs:
       run: |
         pip install requests beautifulsoup4 feedparser
 
-    - name: 執行爬蟲
+    - name: 執行爬蟲並發送通知
+      # 這裡要把 GitHub 的 Secrets 傳遞給 Python 程式
+      env:
+        TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TG_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       run: python main.py
 
-    - name: 更新網頁與時間紀錄
+    - name: 更新紀錄 (如果 main.py 有產生新檔案)
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add .
-        git commit -m "自動更新新聞網頁" || exit 0
+        git commit -m "自動更新時間紀錄" || exit 0
         git push
-
-    - name: 傳送 Telegram 通知
-      if: success()
-      run: |
-        curl -s -X POST "https://telegram.org{{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-          -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-          -d text="📢 半小時新聞巡邏完畢！最新清單：https://github.io"
