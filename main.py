@@ -67,6 +67,9 @@ def main():
             resp = requests.get(url, headers=headers, timeout=20, verify=False)
             resp.encoding = 'utf-8'
             feed = feedparser.parse(resp.text)
+            print(f"DEBUG: {name} 抓取狀態碼: {resp.status_code}")
+            print(f"DEBUG: {name} 解析到的則數: {len(feed.entries)}")
+
             
             items = []
             # 改為 125 分鐘，確保跨小時不遺漏
