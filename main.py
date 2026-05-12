@@ -55,27 +55,25 @@ def main():
             feed = feedparser.parse(resp.text)
             
             items = []
-            # 5. 放寬時間判定：抓取過去 130 分鐘，確保跨小時不遺漏
-            time_limit = datetime.utcnow() - timedelta(minutes=130)
-            
+            # 第一步：直接抓取 feed 裡所有的 entries
             for entry in feed.entries:
-                pub_time = None
-                if hasattr(entry, 'published_parsed') and entry.published_parsed:
-                    pub_time = datetime.fromtimestamp(time.mktime(entry.published_parsed))
+                # 第二步：獲取標題與連結，若標題不存在則跳過
+                title = getattr(entry, 'title', None)
+                link = getattr(entry, 'link', None)
                 
-                # 6. 如果解析不出時間或在時間內，通通收錄
-                if pub_time is None or pub_time > time_limit:
-                    items.append(f"• <a href='{entry.link}'>{entry.title}</a>")
+                if title and link:
+                    # 第三步：先不做時間過濾，確保「所有」現有 RSS 內容都能出來
+                    items.append(f"• <a href='{link}'>{title}</a>")
             
             if items:
-                # 顯示該媒體抓到的總則數，確保「不設上限」
-                summary_text += f"<b>【{name} ({len(items)}則)】</b>\n" + "\n".join(items) + "\n\n"
+                # 加入 Emoji 與統計，讓您在手機上一目了然
+                summary_text += f"<b>【{name} 共 {len(items)} 則】</b>\n" + "\n".join(items) + "\n\n"
                 has_news = True
                 print(f"DEBUG: {name} 成功抓到 {len(items)} 則")
             else:
-                print(f"DEBUG: {name} 抓取結果為空")
-        except Exception as e:
-            print(f"DEBUG: {name} 抓取失敗: {e}")
+                # 如果 items 是空的，印出 feed 結構來診斷
+                print(f"DEBUG: {name} 解析成功但 entries 為空，結構：{list(feed.keys())}")
+
 
     if has_news:
         send_to_telegram(summary_text)
