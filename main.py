@@ -56,25 +56,42 @@ def main():
     summary_text = f"<b>▋ 新聞巡邏 ({datetime.now().strftime('%m/%d %H:%M')})</b>\n\n"
     has_news = False
 
-    # --- 這是第 48 行開始的內容 ---
     for name, url in SOURCES.items():
-        print(f"DEBUG: 正在抓取 {name}...")
         try:
+            # 關鍵：加上 Referer 偽裝和忽略安全檢查
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15',
+                'Referer': 'https://google.com'
+            }
+            # verify=False 是為了救回教育電台
             resp = requests.get(url, headers=headers, timeout=20, verify=False)
             resp.encoding = 'utf-8'
             feed = feedparser.parse(resp.text)
+            
             items = []
+            # 改為 125 分鐘，確保跨小時不遺漏
+            time_limit = datetime.utcnow() - timedelta(minutes=125)
+            
             for entry in feed.entries:
-                title = getattr(entry, 'title', None)
                 link = getattr(entry, 'link', None)
-                if title and link:
-                    items.append(f"• <a href='{link}'>{title}</a>")
+                # 這裡會過濾重複
+                if not link or link in seen_links: continue
+                
+                pub_time = None
+                if hasattr(entry, 'published_parsed') and entry.published_parsed:
+                    pub_time = datetime.fromtimestamp(time.mktime(entry.published_parsed))
+                
+                # 確保是兩小時內的
+                if pub_time is None or pub_time > time_limit:
+                    items.append(f"• <a href='{link}'>{entry.title}</a>")
+                    seen_links.add(link)
+            
             if items:
-                summary_text += f"<b>【{name} 共 {len(items)} 則】</b>\n" + "\n".join(items) + "\n\n"
+                summary_text += f"<b>【{name}】</b>\n" + "\n".join(items) + "\n\n"
                 has_news = True
-                print(f"DEBUG: {name} 成功抓到 {len(items)} 則")
-        except Exception as e:
-            print(f"DEBUG: {name} 失敗: {str(e)[:30]}")
+        except:
+            continue
+
 
     if has_news:
         send_to_telegram(summary_text)
