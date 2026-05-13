@@ -10,17 +10,53 @@ def send_to_telegram(text):
         return
 
     url = f"https://api.telegram.org/bot{token}/sendMessage"
-    payload = {
-        "chat_id": chat_id,
-        "text": text,
-        "parse_mode": "HTML",
-        "disable_web_page_preview": True
-    }
-    try:
-        resp = requests.post(url, data=payload, timeout=20)
-        print(f"Telegram 回應: {resp.status_code}")
-    except Exception as e:
-        print(f"發送失敗: {e}")
+    
+    # --- 僅在此處加入切分邏輯，其餘連線參數完全不動 ---
+    # 設定 3500 字為安全門檻
+    if len(text) > 3500:
+        # 以您的媒體大標題格式作為切分點
+        parts = text.split('\n<b>【') 
+        current_msg = parts[0]
+        
+        for i in range(1, len(parts)):
+            next_part = '\n<b>【' + parts[i]
+            # 如果累積字數即將超標，就先發出目前這一段
+            if len(current_msg) + len(next_part) > 3500:
+                payload = {
+                    "chat_id": chat_id,
+                    "text": current_msg,
+                    "parse_mode": "HTML",
+                    "disable_web_page_preview": True
+                }
+                requests.post(url, data=payload, timeout=20)
+                # 重置下一段訊息的開頭
+                current_msg = "<b>▋ 新聞巡邏 (續)</b>\n" + next_part
+            else:
+                current_msg += next_part
+        
+        # 發送最後剩餘的內容
+        final_payload = {
+            "chat_id": chat_id,
+            "text": current_msg,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True
+        }
+        resp = requests.post(url, data=final_payload, timeout=20)
+        print(f"Telegram 最終分段回應: {resp.status_code}")
+        
+    else:
+        # 字數正常時，執行您原本成功的發送代碼
+        payload = {
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True
+        }
+        try:
+            resp = requests.post(url, data=payload, timeout=20)
+            print(f"Telegram 回應: {resp.status_code}")
+        except Exception as e:
+            print(f"發送失敗: {e}")
 
 def main():
     SOURCES = {
