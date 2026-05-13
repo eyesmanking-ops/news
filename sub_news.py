@@ -25,16 +25,20 @@ def send_to_telegram(text):
 
 def main():
     # 修正部分網址
-    SOURCES = {
-        "聯合-要聞": "https://udn.com/rssfeed/news/2/6638?ch=news",
-        "聯合-社會": "https://udn.com/rssfeed/news/2/6644?ch=news",
-        "聯合-地方": "https://udn.com/rssfeed/news/2/6645?ch=news",
-        "聯合-經濟": "https://udn.com/rssfeed/news/2/6631?ch=news",
-        "聯合-兩岸": "https://udn.com/rssfeed/news/2/6640?ch=news",
-        "中時-即時": "https://www.chinatimes.com/rss/realtimenews.xml",
+SOURCES = {
+        # 聯合報使用 Feedburner 轉址版 (通常較難被封鎖)
+        "聯合-要聞": "https://feeds.feedburner.com/udn/news",
+        "聯合-社會": "https://feeds.feedburner.com/udn/social",
+        "聯合-地方": "https://feeds.feedburner.com/udn/local",
+        "聯合-經濟": "https://feeds.feedburner.com/udn/finance",
+        "聯合-兩岸": "https://feeds.feedburner.com/udn/mainland",
+        
+        # 中時改用另一個路徑
+        "中時-即時": "http://rss.chinatimes.com/rss/realtimenews-index.rss",
+        
+        # 青年日報與國教廣，我們嘗試加上更嚴格的 Cache-Control
         "青報-所有": "https://www.ydn.com.tw/rss/news",
         "國教廣-教育": "https://www.ner.gov.tw/news/?recordId=1",
-        "國教廣-公告": "https://www.ner.gov.tw/news/?recordId=2"
     }
     
     history_file = "sent_links.txt"
