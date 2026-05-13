@@ -6,10 +6,8 @@ def send_to_telegram(text):
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     if not token or not chat_id: return
-
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     
-    # 3500字自動分段邏輯
     if len(text) > 3500:
         parts = text.split('\n<b>【') 
         current_msg = parts[0]
@@ -22,10 +20,10 @@ def send_to_telegram(text):
                 current_msg += next_part
         requests.post(url, data={"chat_id": chat_id, "text": current_msg, "parse_mode": "HTML", "disable_web_page_preview": True})
     else:
-        requests.post(url, data={"chat_id": chat_id, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True})
+        resp = requests.post(url, data={"chat_id": chat_id, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True})
+        print(f"Telegram 發送結果: {resp.status_code}")
 
 def main():
-    # 依照你的需求配置的 4 間媒體、9 個頻道
     SOURCES = {
         "聯合-要聞": "https://udn.com/rssfeed/news/2/6638?ch=news",
         "聯合-社會": "https://udn.com/rssfeed/news/2/6644?ch=news",
@@ -45,39 +43,59 @@ def main():
             sent_links = set(f.read().splitlines())
 
     now_utc = datetime.utcnow()
-    time_threshold = now_utc - timedelta(hours=12)
-    headers = {'User-Agent': 'Mozilla/5.0'}
+    # 診斷期：將時間放寬到 24 小時，並確保不被紀錄檔擋掉
+    time_threshold = now_utc - timedelta(hours=24) 
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
     summary_text = ""
     new_found_links = []
 
     for name, url in SOURCES.items():
+        print(f"正在檢查: {name}...")
         try:
             resp = requests.get(url, headers=headers, timeout=30)
             feed = feedparser.parse(resp.content)
+            
+            if not feed.entries:
+                print(f"⚠️ {name} 抓取不到任何 entries，可能是格式不支援")
+                continue
+                
             items = []
             for entry in feed.entries:
                 link = entry.link
-                if link not in sent_links:
-                    try:
-                        pub_time = datetime(*entry.published_parsed[:6])
+                # 診斷期：先不管 sent_links，只要時間對就抓出來
+                try:
+                    # 嘗試多種可能的時間標籤
+                    dt_parsed = entry.get('published_parsed') or entry.get('updated_parsed') or entry.get('created_parsed')
+                    if dt_parsed:
+                        pub_time = datetime(*dt_parsed[:6])
                         if pub_time > time_threshold:
                             tw_time = (pub_time + timedelta(hours=8)).strftime('%H:%M')
                             items.append(f"• [{tw_time}] <a href='{link}'>{entry.title}</a>")
                             new_found_links.append(link)
-                    except: continue
+                    else:
+                        # 如果沒時間戳記，就強行抓前三則來測試
+                        if len(items) < 3:
+                            items.append(f"• [新] <a href='{link}'>{entry.title}</a>")
+                            new_found_links.append(link)
+                except Exception as e:
+                    print(f"解析 {name} 內容出錯: {e}")
+                    continue
+            
             if items:
+                print(f"✅ {name} 成功抓到 {len(items)} 則新聞")
                 summary_text += f"\n<b>【{name} ({len(items)}則)】</b>\n" + "\n".join(items) + "\n"
-        except: continue
+        except Exception as e:
+            print(f"連線 {name} 失敗: {e}")
 
     if summary_text:
         tw_now = (now_utc + timedelta(hours=8)).strftime('%m/%d %H:%M')
         final_msg = f"<b>▋ 深度新聞巡邏 ({tw_now})</b>\n" + summary_text
         send_to_telegram(final_msg)
         
-        # 存回紀錄檔，與主任務共享紀錄以去重
-        updated_history = list(sent_links) + new_found_links
-        with open(history_file, "w") as f:
-            f.write("\n".join(updated_history[-2000:])) # 稍微加大紀錄量
+        with open(history_file, "a") as f: # 用 append 模式避免覆蓋
+            f.write("\n".join(new_found_links) + "\n")
+    else:
+        print("❌ 最終結果：沒有符合條件的新聞可發送")
 
 if __name__ == "__main__":
     main()
