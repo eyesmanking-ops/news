@@ -2,13 +2,16 @@ name: 新聞自動巡邏
 
 on:
   schedule:
-    # 每 30 分鐘自動執行
     - cron: '*/30 * * * *'
-  workflow_dispatch: # 允許手動測試
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    # 必須開啟寫入權限，才能存儲新聞紀錄
+    permissions:
+      contents: write
+    
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -23,7 +26,14 @@ jobs:
 
       - name: Run Script
         env:
-          # 左邊是程式碼要讀的變數，右邊是您 GitHub Secrets 的長名稱
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python main.py
+
+      - name: Commit and Push if records updated
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add sent_links.txt || exit 0
+          git commit -m "Update sent news history [skip ci]" || exit 0
+          git push
