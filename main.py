@@ -63,6 +63,8 @@ def main():
         "中央社-政治": "https://feeds.feedburner.com/rsscna/politics",
         "中央社-社會": "https://feeds.feedburner.com/rsscna/social",
         "中央社-兩岸": "https://feeds.feedburner.com/rsscna/mainland",
+        "中央社-即時": "https://feeds.feedburner.com/rsscna/main",
+        "中央社-產經": "https://feeds.feedburner.com/rsscna/finance",
         "自由時報-全部": "https://news.ltn.com.tw/rss/all.xml"
     }
     
