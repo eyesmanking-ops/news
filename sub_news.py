@@ -8,7 +8,6 @@ def send_to_telegram(text):
     if not token or not chat_id: return
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     
-    # 保持分段邏輯
     if len(text) > 3500:
         parts = text.split('\n<b>【') 
         current_msg = parts[0]
@@ -24,7 +23,7 @@ def send_to_telegram(text):
         requests.post(url, data={"chat_id": chat_id, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True})
 
 def main():
-    # 注意：這裡前方必須有 4 個空格
+    # 這裡每一行前面都必須有 4 個空格對齊
     SOURCES = {
         "聯合-要聞": "https://feeds.feedburner.com/udn/news",
         "聯合-社會": "https://feeds.feedburner.com/udn/social",
@@ -43,7 +42,8 @@ def main():
             sent_links = set(f.read().splitlines())
 
     now_utc = datetime.utcnow()
-    time_threshold = now_utc - timedelta(hours=12)
+    # 測試階段：建議先放寬到 24 小時，確保一定能抓到東西
+    time_threshold = now_utc - timedelta(hours=24)
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
         'Accept': 'application/rss+xml, application/xml, text/xml, */*'
@@ -55,11 +55,15 @@ def main():
     for name, url in SOURCES.items():
         print(f"正在檢查: {name}...")
         try:
-            time.sleep(2) # 延遲兩秒避免被擋
+            time.sleep(2) # 延遲 2 秒避免被封鎖
             resp = requests.get(url, headers=headers, timeout=30, verify=True)
             feed = feedparser.parse(io.BytesIO(resp.content))
             
             items = []
+            if not feed.entries:
+                print(f"⚠️ {name} 讀取不到內容")
+                continue
+
             for entry in feed.entries:
                 link = entry.link
                 if link not in sent_links:
@@ -71,7 +75,8 @@ def main():
                             items.append(f"• [{tw_time}] <a href='{link}'>{entry.title}</a>")
                             new_found_links.append(link)
                     else:
-                        if len(items) < 2:
+                        # 若無時間戳，抓取最新 1 則測試
+                        if not items:
                             items.append(f"• [新] <a href='{link}'>{entry.title}</a>")
                             new_found_links.append(link)
             
@@ -86,8 +91,12 @@ def main():
         final_msg = f"<b>▋ 深度新聞巡邏 ({tw_now})</b>\n" + summary_text
         send_to_telegram(final_msg)
         
-        updated_history = list(sent_links) + new_found_links
-        with open(history_file, "w") as f:
-            f.write("\n".join(updated_history[-2000:]))
+        # 寫入紀錄
+        with open(history_file, "a") as f:
+            for l in new_found_links:
+                f.write(l + "\n")
     else:
-        print("最終結果：仍無新聞可發送。")
+        print("最終結果：仍無新新聞。")
+
+if __name__ == "__main__":
+    main()
