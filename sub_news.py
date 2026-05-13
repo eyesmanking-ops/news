@@ -23,16 +23,16 @@ def send_to_telegram(text):
         requests.post(url, data={"chat_id": chat_id, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True})
 
 def main():
-    # 這裡每一行前面都必須有 4 個空格對齊
+    # 改用 RSSHub 代理網址，繞過媒體對 GitHub IP 的封鎖
     SOURCES = {
-        "聯合-要聞": "https://feeds.feedburner.com/udn/news",
-        "聯合-社會": "https://feeds.feedburner.com/udn/social",
-        "聯合-地方": "https://feeds.feedburner.com/udn/local",
-        "聯合-經濟": "https://feeds.feedburner.com/udn/finance",
-        "聯合-兩岸": "https://feeds.feedburner.com/udn/mainland",
-        "中時-即時": "http://rss.chinatimes.com/rss/realtimenews-index.rss",
-        "青報-所有": "https://www.ydn.com.tw/rss/news",
-        "國教廣-教育": "https://www.ner.gov.tw/news/?recordId=1"
+        "聯合-要聞": "https://rsshub.app/udn/news/2/6638",
+        "聯合-社會": "https://rsshub.app/udn/news/2/6644",
+        "聯合-地方": "https://rsshub.app/udn/news/2/6645",
+        "聯合-經濟": "https://rsshub.app/udn/news/2/6631",
+        "聯合-兩岸": "https://rsshub.app/udn/news/2/6640",
+        "中時-即時": "https://rsshub.app/chinatimes/realtimenews",
+        "青報-所有": "https://rsshub.app/ydn",
+        "國教廣-教育": "https://rsshub.app/ner/1"
     }
     
     history_file = "sent_links.txt"
@@ -42,26 +42,23 @@ def main():
             sent_links = set(f.read().splitlines())
 
     now_utc = datetime.utcnow()
-    # 測試階段：建議先放寬到 24 小時，確保一定能抓到東西
+    # 第一次跑建議放寬時間到 24 小時
     time_threshold = now_utc - timedelta(hours=24)
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-        'Accept': 'application/rss+xml, application/xml, text/xml, */*'
-    }
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+    
     summary_text = ""
     new_found_links = []
 
-    import time
     for name, url in SOURCES.items():
-        print(f"正在檢查: {name}...")
+        print(f"正在透過中繼站檢查: {name}...")
         try:
-            time.sleep(2) # 延遲 2 秒避免被封鎖
-            resp = requests.get(url, headers=headers, timeout=30, verify=True)
+            # 請求 RSSHub
+            resp = requests.get(url, headers=headers, timeout=40)
             feed = feedparser.parse(io.BytesIO(resp.content))
             
             items = []
             if not feed.entries:
-                print(f"⚠️ {name} 讀取不到內容")
+                print(f"⚠️ {name} 中繼站暫時無資料")
                 continue
 
             for entry in feed.entries:
@@ -75,7 +72,7 @@ def main():
                             items.append(f"• [{tw_time}] <a href='{link}'>{entry.title}</a>")
                             new_found_links.append(link)
                     else:
-                        # 若無時間戳，抓取最新 1 則測試
+                        # 備案：若無時間則抓一則最新的
                         if not items:
                             items.append(f"• [新] <a href='{link}'>{entry.title}</a>")
                             new_found_links.append(link)
@@ -84,19 +81,18 @@ def main():
                 print(f"✅ {name} 成功抓到 {len(items)} 則")
                 summary_text += f"\n<b>【{name} ({len(items)}則)】</b>\n" + "\n".join(items) + "\n"
         except Exception as e:
-            print(f"❌ {name} 發生錯誤: {str(e)}")
+            print(f"❌ {name} 中繼站連線失敗: {str(e)}")
 
     if summary_text:
         tw_now = (now_utc + timedelta(hours=8)).strftime('%m/%d %H:%M')
         final_msg = f"<b>▋ 深度新聞巡邏 ({tw_now})</b>\n" + summary_text
         send_to_telegram(final_msg)
         
-        # 寫入紀錄
         with open(history_file, "a") as f:
             for l in new_found_links:
                 f.write(l + "\n")
     else:
-        print("最終結果：仍無新新聞。")
+        print("最終結果：中繼站目前也抓不到新內容。")
 
 if __name__ == "__main__":
     main()
