@@ -3,7 +3,7 @@ import os, requests, feedparser, io, urllib.parse
 from datetime import datetime, timedelta
 
 # ==========================================
-# 已嵌入您的 Google 代理網址
+# 您的 Google 代理網址
 # ==========================================
 GAS_PROXY_URL = "https://script.google.com/macros/s/AKfycbw5b5dbBYX9Quf0CeDAJmXHM5U9LbFZazS_fZ-U9PjXwi1fxGVULSg__2SjmAeo2J-l/exec"
 
@@ -46,21 +46,27 @@ def main():
             sent_links = set(f.read().splitlines())
 
     now_utc = datetime.utcnow()
-    # 第一次執行建議抓 24 小時內，確保有新聞產出
+    # 測試期間設定 24 小時內，確保一定有新聞
     time_threshold = now_utc - timedelta(hours=24)
     summary_text = ""
     new_found_links = []
 
+    # 關鍵：向 Google Proxy 請求時也帶上標頭
+    gas_headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+
     for name, target_url in SOURCES.items():
         print(f"正在透過 Google 代理抓取: {name}...")
         try:
-            # 對目標網址編碼，確保 Google Script 能正確接收
             encoded_url = urllib.parse.quote(target_url, safe='')
             proxy_url = f"{GAS_PROXY_URL}?url={encoded_url}"
             
-            resp = requests.get(proxy_url, timeout=45)
+            # 增加 allow_redirects 確保 GAS 的轉址能被處理
+            resp = requests.get(proxy_url, headers=gas_headers, timeout=45, allow_redirects=True)
+            
             if resp.status_code != 200:
-                print(f"⚠️ {name} 代理連線異常 (HTTP {resp.status_code})")
+                print(f"⚠️ {name} 代理連線失敗 (HTTP {resp.status_code})")
                 continue
                 
             feed = feedparser.parse(io.BytesIO(resp.content))
@@ -69,7 +75,6 @@ def main():
             for entry in feed.entries:
                 link = entry.link
                 if link not in sent_links:
-                    # 優先讀取時間，若無則強制抓取
                     dt_parsed = entry.get('published_parsed') or entry.get('updated_parsed')
                     if dt_parsed:
                         pub_time = datetime(*dt_parsed[:6])
@@ -78,12 +83,13 @@ def main():
                             items.append(f"• [{tw_time}] <a href='{link}'>{entry.title}</a>")
                             new_found_links.append(link)
                     else:
+                        # 無時間戳備案
                         if len(items) < 2:
                             items.append(f"• [新] <a href='{link}'>{entry.title}</a>")
                             new_found_links.append(link)
             
             if items:
-                print(f"✅ {name} 成功透過代理抓到 {len(items)} 則")
+                print(f"✅ {name} 成功抓到 {len(items)} 則")
                 summary_text += f"\n<b>【{name} ({len(items)}則)】</b>\n" + "\n".join(items) + "\n"
         except Exception as e:
             print(f"❌ {name} 代理過程出錯: {str(e)}")
@@ -93,12 +99,11 @@ def main():
         final_msg = f"<b>▋ 深度新聞巡邏 ({tw_now})</b>\n" + summary_text
         send_to_telegram(final_msg)
         
-        # 存回紀錄檔，實現跨媒體去重
         with open(history_file, "a") as f:
             for l in new_found_links:
                 f.write(l + "\n")
     else:
-        print("最終結果：中繼抓取成功，但目前無新新聞。")
+        print("最終結果：代理抓取成功，但目前無新新聞（或全數重複）。")
 
 if __name__ == "__main__":
     main()
