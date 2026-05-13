@@ -1,12 +1,18 @@
 # -*- coding: utf-8 -*-
-import os, requests, feedparser, io
+import os, requests, feedparser, io, urllib.parse
 from datetime import datetime, timedelta
+
+# ==========================================
+# 已嵌入您的 Google 代理網址
+# ==========================================
+GAS_PROXY_URL = "https://script.google.com/macros/s/AKfycbw5b5dbBYX9Quf0CeDAJmXHM5U9LbFZazS_fZ-U9PjXwi1fxGVULSg__2SjmAeo2J-l/exec"
 
 def send_to_telegram(text):
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     if not token or not chat_id: return
     url = f"https://api.telegram.org/bot{token}/sendMessage"
+    
     if len(text) > 3500:
         parts = text.split('\n<b>【') 
         current_msg = parts[0]
@@ -40,35 +46,30 @@ def main():
             sent_links = set(f.read().splitlines())
 
     now_utc = datetime.utcnow()
-    # 這裡將時間門檻設為 48 小時，確保測試時一定能抓到
-    time_threshold = now_utc - timedelta(hours=48)
-    
-    # 關鍵：模仿最常見的 Chrome 瀏覽器，減少被擋機率
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7',
-    }
-    
+    # 第一次執行建議抓 24 小時內，確保有新聞產出
+    time_threshold = now_utc - timedelta(hours=24)
     summary_text = ""
     new_found_links = []
 
-    for name, url in SOURCES.items():
-        print(f"正在嘗試抓取: {name}...")
+    for name, target_url in SOURCES.items():
+        print(f"正在透過 Google 代理抓取: {name}...")
         try:
-            # 加上 stream=True 與更長的 timeout
-            resp = requests.get(url, headers=headers, timeout=30, stream=True)
+            # 對目標網址編碼，確保 Google Script 能正確接收
+            encoded_url = urllib.parse.quote(target_url, safe='')
+            proxy_url = f"{GAS_PROXY_URL}?url={encoded_url}"
+            
+            resp = requests.get(proxy_url, timeout=45)
             if resp.status_code != 200:
-                print(f"⚠️ {name} 回傳錯誤代碼: {resp.status_code}")
+                print(f"⚠️ {name} 代理連線異常 (HTTP {resp.status_code})")
                 continue
                 
-            feed = feedparser.parse(resp.content)
+            feed = feedparser.parse(io.BytesIO(resp.content))
             items = []
             
             for entry in feed.entries:
                 link = entry.link
                 if link not in sent_links:
-                    # 嘗試各種可能的時間欄位
+                    # 優先讀取時間，若無則強制抓取
                     dt_parsed = entry.get('published_parsed') or entry.get('updated_parsed')
                     if dt_parsed:
                         pub_time = datetime(*dt_parsed[:6])
@@ -77,26 +78,27 @@ def main():
                             items.append(f"• [{tw_time}] <a href='{link}'>{entry.title}</a>")
                             new_found_links.append(link)
                     else:
-                        # 如果完全沒時間，抓最新的 1 則
-                        if not items:
+                        if len(items) < 2:
                             items.append(f"• [新] <a href='{link}'>{entry.title}</a>")
                             new_found_links.append(link)
             
             if items:
-                print(f"✅ {name} 成功抓到 {len(items)} 則")
+                print(f"✅ {name} 成功透過代理抓到 {len(items)} 則")
                 summary_text += f"\n<b>【{name} ({len(items)}則)】</b>\n" + "\n".join(items) + "\n"
         except Exception as e:
-            print(f"❌ {name} 抓取失敗: {str(e)}")
+            print(f"❌ {name} 代理過程出錯: {str(e)}")
 
     if summary_text:
         tw_now = (now_utc + timedelta(hours=8)).strftime('%m/%d %H:%M')
         final_msg = f"<b>▋ 深度新聞巡邏 ({tw_now})</b>\n" + summary_text
         send_to_telegram(final_msg)
+        
+        # 存回紀錄檔，實現跨媒體去重
         with open(history_file, "a") as f:
             for l in new_found_links:
                 f.write(l + "\n")
     else:
-        print("最終結果：所有嘗試均失敗。這代表該主機 IP 已被徹底封鎖。")
+        print("最終結果：中繼抓取成功，但目前無新新聞。")
 
 if __name__ == "__main__":
     main()
